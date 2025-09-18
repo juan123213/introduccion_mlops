@@ -2,16 +2,17 @@ name: Train and Publish Model
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
@@ -21,20 +22,16 @@ jobs:
       - name: Train the Model
         run: python train.py
 
-      # Copiamos SOLO lo que queremos subir al Hub
-      - name: Prepare artifacts for Hugging Face
-        run: |
-          mkdir -p artifacts
-          cp model.pkl artifacts/
-          cp metrics.txt artifacts/
-          # opcional: crea una tarjeta de modelo si no existe
-          [ -f README.md ] && cp README.md artifacts/ || echo "# modelo-iris" > artifacts/README.md
-
-      - name: Publish to Hugging Face Hub (model)
-        uses: nateraw/huggingface-sync-action@v0.0.5
+      - name: Publish to Hugging Face Hub
+        uses: huggingface/hub-action@v4
         with:
-          github_repo_id: ${{ github.repository }}
-          huggingface_repo_id: Juan2233/modelo-iris
-          repo_type: model
-          subdirectory: artifacts
+          # Esta línea usa el secreto que creaste.
           hf_token: ${{ secrets.HF_TOKEN }}
+          
+          # Esta línea apunta a tu repositorio, que ya existe.
+          repo_id: Juan2233/modelo-iris
+          
+          # Los archivos que se van a subir.
+          files_to_deploy: >
+            model.pkl
+            metrics.txt
