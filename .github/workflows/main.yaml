@@ -1,0 +1,38 @@
+name: Train and Publish Model
+
+on:
+  push:
+    branches:
+      - main # Se activa cada vez que subes cambios a la rama principal
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: Install Python Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Train the Model
+        run: python train.py # Esto genera 'model.pkl' y 'metrics.txt'
+
+      - name: Publish to Hugging Face Hub
+        uses: huggingface/hub-action@v1 # Acción para subir archivos
+        with:
+          # Token de Hugging Face (ver paso 2)
+          hf_token: ${{ secrets.HF_TOKEN }}
+
+          # Nombre de tu repositorio en Hugging Face (ej: "tu-usuario/mi-modelo-iris")
+          # DEBE SER UN REPOSITORIO DE TIPO "MODEL"
+          repo_id: Juan2233/modelo-iris
+
+          # Archivos que se subirán
+          files_to_deploy: >
+            model.pkl
+            metrics.txt
