@@ -23,7 +23,7 @@ jobs:
         run: python train.py # Esto genera 'model.pkl' y 'metrics.txt'
 
       - name: Publish to Hugging Face Hub
-        uses: huggingface/hub-action@v1 # Acción para subir archivos
+        uses: huggingface/hub-action@v4 # Acción para subir archivos
         with:
           # Token de Hugging Face (ver paso 2)
           hf_token: ${{ secrets.HF_TOKEN }}
