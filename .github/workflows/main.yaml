@@ -2,36 +2,52 @@ name: Train and Publish Model
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
       - name: Install Python Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install "huggingface_hub>=0.23.0"
 
       - name: Train the Model
         run: python train.py
 
-      - name: Publish to Hugging Face Hub
-        uses: huggingface/hub-action@v4
-        with:
-          # Esta línea usa el secreto que creaste.
-          hf_token: ${{ secrets.HF_TOKEN }}
-          
-          # Esta línea apunta a tu repositorio, que ya existe.
-          repo_id: Juan2233/modelo-iris
-          
-          # Los archivos que se van a subir.
-          files_to_deploy: >
-            model.pkl
-            metrics.txt
+      - name: Prepare artifacts for Hugging Face
+        run: |
+          mkdir -p artifacts
+          cp model.pkl artifacts/
+          cp metrics.txt artifacts/
+          [ -f README.md ] && cp README.md artifacts/ || echo "# modelo-iris" > artifacts/README.md
+
+      - name: Upload to Hugging Face Hub (model)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi, create_repo
+          token = os.environ["HF_TOKEN"]
+          repo_id = "Juan2233/modelo-iris"
+          # Crea el repo si no existe (tipo 'model', público)
+          create_repo(repo_id, token=token, repo_type="model", private=False, exist_ok=True)
+          # Sube toda la carpeta de artefactos a la raíz del repo
+          HfApi().upload_folder(
+              folder_path="artifacts",
+              repo_id=repo_id,
+              repo_type="model",
+              token=token,
+              path_in_repo="."
+          )
+          print("Publicado en https://huggingface.co/" + repo_id)
+          PY
