@@ -1,53 +1,63 @@
-name: Train and Publish Model
+name: Entrenar y Publicar Modelo
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main # Se activa con cada push a la rama principal
 
 jobs:
   run:
     runs-on: ubuntu-latest
     steps:
+      # Paso 1: Obtener el código del repositorio
       - uses: actions/checkout@v4
 
+      # Paso 2: Configurar el entorno de Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
+      # Paso 3: Instalar las librerías necesarias
       - name: Install Python Dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install "huggingface_hub>=0.23.0"
+        run: pip install -r requirements.txt
 
+      # Paso 4: Entrenar el modelo (esto crea model.pkl y metrics.txt)
       - name: Train the Model
         run: python train.py
 
-      - name: Prepare artifacts for Hugging Face
-        run: |
-          mkdir -p artifacts
-          cp model.pkl artifacts/
-          cp metrics.txt artifacts/
-          [ -f README.md ] && cp README.md artifacts/ || echo "# modelo-iris" > artifacts/README.md
-
-      - name: Upload to Hugging Face Hub (model)
+      # Paso 5: Publicar los artefactos en Hugging Face
+      - name: Publish to Hugging Face Hub
         env:
+          # El token se obtiene de los secretos de GitHub
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python - <<'PY'
+          python -c "
+          from huggingface_hub import HfApi
           import os
-          from huggingface_hub import HfApi, create_repo
-          token = os.environ["HF_TOKEN"]
-          repo_id = "Juan2233/modelo-iris"
-          # Crea el repo si no existe (tipo 'model', público)
-          create_repo(repo_id, token=token, repo_type="model", private=False, exist_ok=True)
-          # Sube toda la carpeta de artefactos a la raíz del repo
-          HfApi().upload_folder(
-              folder_path="artifacts",
+
+          # Inicializa la conexión con la API de Hugging Face
+          api = HfApi()
+          repo_id = 'Juan2233/modelo-iris' # Tu ID de repositorio
+          token = os.environ.get('HF_TOKEN')
+
+          print(f'Subiendo archivos al repositorio: {repo_id}')
+
+          # Sube el modelo
+          api.upload_file(
+              path_or_fileobj='model.pkl',
+              path_in_repo='model.pkl', # Nombre del archivo en el Hub
               repo_id=repo_id,
-              repo_type="model",
-              token=token,
-              path_in_repo="."
+              token=token
           )
-          print("Publicado en https://huggingface.co/" + repo_id)
-          PY
+
+          # Sube las métricas
+          api.upload_file(
+              path_or_fileobj='metrics.txt',
+              path_in_repo='metrics.txt', # Nombre del archivo en el Hub
+              repo_id=repo_id,
+              token=token
+          )
+
+          print('¡Archivos subidos con éxito!')
+          "
